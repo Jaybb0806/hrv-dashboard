@@ -1,0 +1,10 @@
+data/
+__pycache__/
+.DS_Store
+.venv/
+firmware/main/config_local.h
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/managed_components/
+firmware/dependencies.lock

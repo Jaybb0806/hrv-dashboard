@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HRV Dashboard</title>
+<link rel="preload" href="/static/fonts/IBMPlexSansThai-Regular.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="/static/fonts/IBMPlexSansThai-SemiBold.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Music &amp; Relaxation</h1>
+    <div class="sub">Heart-rate variability before and after listening</div>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Pages">
+    <button data-view="overview" class="on">Overview <kbd>1</kbd></button>
+    <button data-view="people">Individuals <kbd>2</kbd></button>
+    <button data-view="live">Live <kbd>3</kbd></button>
+    <button data-view="devices">Devices <kbd>4</kbd></button>
+  </nav>
+  <div class="clock"><span id="conn" class="conn" title="Live connection to the server"></span><span id="clock" class="num">--:--</span></div>
+</header>
+
+<section class="session">
+  <div class="session-info">
+    <span id="session">—</span><span id="mode" class="mode">—</span>
+    <span class="phase" id="phase" role="status"><span id="phase-label">—</span> <span id="phase-timer"></span></span>
+  </div>
+  <ol class="timeline" id="timeline" aria-label="Session phases"></ol>
+</section>
+
+<section class="admin" id="admin" hidden>
+  <span class="admin-label">Phase</span>
+  <button data-phase="baseline">Start baseline</button>
+  <button data-phase="music">Start music</button>
+  <button data-phase="post">Start post</button>
+  <button data-phase="done">End session</button>
+  <span class="admin-label">Sensors</span>
+  <button data-mode="ppi">HRV (PPI)</button>
+  <button data-mode="hr">HR (movement OK)</button>
+  <span class="spacer"></span>
+  <button id="show-summary">Show results on audience screen</button>
+  <button id="show-summary2">Show individual results</button>
+  <button id="new-session">New session</button>
+  <select id="export-session" aria-label="Round to download" title="Round to download"></select>
+  <a href="/api/export.xlsx" class="btn" id="export-xlsx" title="Everything recorded in this round, measured values">Download Excel</a>
+</section>
+
+<main>
+  <section class="view on" id="view-overview" lang="th">
+    <div class="ov-weave" aria-hidden="true"></div>
+    <div class="ov">
+      <div class="ov-stats rise">
+        <div class="ov-tile ov-hrv" id="ov-hrv">
+          <div class="ov-label"><span>HRV ของกลุ่ม</span><span class="num muted">RMSSD · 60 วินาที</span></div>
+          <div class="ov-body">
+            <div class="ov-big"><span class="num ov-num" id="ov-hrv-val">—</span><span class="num unit">ms</span></div>
+            <div class="ov-sub" id="ov-hrv-pct">รอค่าช่วงก่อนฟัง</div>
+          </div>
+        </div>
+        <div class="ov-tile ov-hr" id="ov-hr" role="button" tabindex="0" title="กดเพื่อเปิดมอนิเตอร์ HR">
+          <div class="ov-label"><span>HR เฉลี่ย</span><span class="num muted" id="ov-hr-n"></span></div>
+          <div class="ov-body ov-mid">
+            <span class="heart big still" id="ov-hr-heart"><span class="ripple"></span><span class="beat"></span></span>
+            <span class="ov-val"><span class="num ov-num" id="ov-hr-val">—</span><span class="num unit">bpm</span></span>
+          </div>
+        </div>
+        <div class="ov-tile">
+          <div class="ov-label"><span>HRV เทียบก่อนฟัง</span><span class="muted" id="ov-cmp-n"></span></div>
+          <div class="ov-body ov-updown">
+            <span class="up"><b class="num" id="ov-up">—</b><small>สูงขึ้น</small></span>
+            <span class="down"><b class="num" id="ov-down">—</b><small>ลดลง</small></span>
+          </div>
+        </div>
+      </div>
+      <figure class="ov-chart rise">
+        <figcaption><span class="ov-chart-title">HRV ของทั้งกลุ่ม ตามเวลา</span><span id="ov-base-note"></span></figcaption>
+        <div class="ov-plot"><div id="trend-chart" class="chart"></div><span class="sheen" aria-hidden="true"></span></div>
+      </figure>
+    </div>
+    <div class="ov-people rise" id="ov-people" aria-label="ผู้เข้าร่วม"></div>
+    <p class="foot" id="foot"></p>
+  </section>
+
+  <section class="view" id="view-people">
+    <div class="legend">
+      <span><i class="sw pre"></i>Before</span>
+      <span><i class="sw up"></i>After · increased</span>
+      <span><i class="sw down"></i>After · decreased</span>
+      <span class="muted" id="people-note"></span>
+    </div>
+    <div class="dumbbells" id="dumbbells"></div>
+  </section>
+
+  <section class="view" id="view-live">
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="view" id="view-devices">
+    <div class="grid-devices">
+      <div class="card"><h2>Gateway (ESP32)</h2><div id="gateways"></div></div>
+      <div class="card"><h2>Sensors</h2><div id="sensors"></div></div>
+    </div>
+  </section>
+</main>
+
+<div class="monitor" id="monitor" hidden>
+  <div class="mon-head">
+    <span class="mon-title" id="mon-title">—</span>
+    <span class="mon-sub" id="mon-sub"></span>
+    <button class="mon-close" id="mon-close" aria-label="Close">✕ <kbd>Esc</kbd></button>
+  </div>
+  <div class="mon-body">
+    <div class="mon-traces">
+      <div class="mon-label">HR · last 2 minutes</div>
+      <canvas id="mon-trend"></canvas>
+      <div class="mon-label" id="mon-beats-label"></div>
+      <canvas id="mon-beats"></canvas>
+    </div>
+    <div class="mon-side">
+      <div class="mon-hr"><span class="heart">♥</span><span id="mon-hr">--</span><small>bpm</small></div>
+      <div class="mon-stats" id="mon-stats"></div>
+    </div>
+  </div>
+</div>
+<div class="summary" id="summary" hidden lang="th" role="dialog" aria-modal="true" aria-label="สรุปผล">
+  <div class="sum-weave" aria-hidden="true"></div>
+  <section class="sum-hero card-s" id="sum-hero" aria-label="ผลสรุป">
+    <div class="sh-text">
+      <div class="sh-label" id="sh-label"></div>
+      <div class="sh-verdict" id="sh-verdict"></div>
+      <div class="sh-sub num" id="sh-sub"></div>
+    </div>
+    <div class="sh-figure">
+      <div class="sh-big num" id="sh-big">—</div>
+      <div class="sh-cap">เทียบกับก่อนฟัง</div>
+    </div>
+    <div class="sh-chips" id="sh-chips"></div>
+  </section>
+  <section class="sum-ring card-s" id="sum-ring" aria-label="คนที่ HRV สูงขึ้น">
+    <div class="rg-dial">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="rg-bg" cx="60" cy="60" r="50" pathLength="100"/>
+        <circle class="rg-up" cx="60" cy="60" r="50" pathLength="100"/>
+      </svg>
+      <div class="rg-center"><b class="rg-pct num" id="rg-pct">—</b></div>
+    </div>
+    <div class="rg-text">
+      <div class="rg-label">คนที่ HRV สูงขึ้น</div>
+      <div class="rg-num num"><b id="rg-up">—</b><span id="rg-n"></span></div>
+      <div class="rg-note" id="rg-note"></div>
+    </div>
+  </section>
+  <figure class="sum-chart card-s">
+    <figcaption><span class="sum-h">HRV ของทั้งกลุ่ม ตลอดรอบ</span>
+      <span class="sum-legend"><span><i class="dash"></i>ระดับก่อนฟัง</span><span><i class="sw up"></i>สูงกว่า</span><span><i class="sw down"></i>ต่ำกว่า</span></span></figcaption>
+    <div class="sum-plot" id="sum-plot"></div>
+  </figure>
+  <section class="sum-phases card-s" aria-label="HRV เฉลี่ยแต่ละช่วง">
+    <h3 class="sum-h">HRV เฉลี่ยแต่ละช่วง <span class="sum-h-note" id="sp-note"></span></h3>
+    <div class="sp-bars" id="sum-phase-bars"></div>
+  </section>
+</div>
+<div class="summary2" id="summary2" hidden lang="th" role="dialog" aria-modal="true" aria-label="ผลรายบุคคล">
+  <div class="sum-weave" aria-hidden="true"></div>
+  <header class="s2-head">
+    <div class="s2-titles">
+      <div class="sh-label" id="s2-label"></div>
+      <h2 class="s2-title">ผลรายบุคคล <span class="s2-note" id="s2-note"></span></h2>
+    </div>
+    <div class="s2-count" id="s2-count"></div>
+  </header>
+  <div class="s2-grid" id="s2-grid"></div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
